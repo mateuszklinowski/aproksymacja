@@ -1,22 +1,22 @@
 
 ## Mateusz Klinowski
+## Dima Kalinichenko
 #### Metody numeryczne  
 #### Akademia WSB
 
 
-Rozwiązanie zadania 1: interpolacji 
+Rozwiązanie zadania 2: aproksymacja
 
 - skompilowana aplikacja znajduje się w folderze `/build`
 
 - kod źródłowy znajduję się w folderze `/src`
 
-- obliczanie interpolacji W(x) znajduję się w pliku `/src/interpolation.helper.js`
+- obliczanie aproksymacji W(x) znajduję się w folderze `/src/approximations/`
 
-- createInterpolationFunction przyjmuje tablice węzłów w postaci obiektów 
-`{
-    x: value
-    y: value
-}`
+- program pozwala wyliczyć aproksymacje:
+    * liniową
+    * logarytmiczna
+    * exp
 
 ## Uruchomienie
 
@@ -26,7 +26,7 @@ Pobiera zależności projektu
 
 ### `npm start / yarn start`
 
-Uruchamia aplikacje w przeglądarce<br> 
+Uruchamia aplikacje w przeglądarce<br>
 pod adresem: [http://localhost:3000](http://localhost:3000)
 
 #### mateusz.klinowski@edu.uekat.pl

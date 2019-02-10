@@ -1,10 +1,12 @@
 import React, {Component} from 'react';
-import MathJax from 'react-mathjax2';
 
-import {createInterpolationString, createInterpolationFunction} from "./interpolation.helper";
+import {createApproximationFunction} from "./approximation.helper";
 
 import './App.css';
 import {PointInput} from "./components/pointInput/point-input.component";
+import {LINEAR_SAMPLE} from "./approximations/linear";
+import {LOG_SAMPLE} from "./approximations/log";
+import {EXP_SAMPLE} from "./approximations/exp";
 
 window.d3 = require('d3');
 const functionPlot = require('function-plot');
@@ -15,14 +17,29 @@ class App extends Component {
         super(props);
 
         this.state = {
-            points: [],
-            interpolation: '',
+            points: LINEAR_SAMPLE,
+            type: 'linear'
         }
     }
 
+    onTypeChange= ({target:{ value }}) => {
+
+        let points = LINEAR_SAMPLE;
+        if(value === 'log'){
+            points = LOG_SAMPLE
+        } else if (value === 'exp'){
+            points = EXP_SAMPLE
+        }
+
+        this.setState({
+            type: value,
+            points: points
+        })
+    };
+
     onXChange = (x, index) => {
         let newPoints = this.state.points;
-        newPoints[index].x = x;
+        newPoints[index].x = Number(x);
         this.setState({
             points: newPoints
         })
@@ -30,7 +47,7 @@ class App extends Component {
 
     onYChange = (y, index) => {
         let newPoints = this.state.points;
-        newPoints[index].y = y;
+        newPoints[index].y = Number(y);
         this.setState({
             points: newPoints
         })
@@ -48,36 +65,34 @@ class App extends Component {
         })
     };
 
-    createInterpolation = () => {
+    validData(){
         if(this.state.points.length <= 1){
             this.setState({
                 error:'Podaj minimum 2 węzły'
             });
-            return;
+            return false;
         }
         else {
-            let dataValid = true;
             this.state.points.forEach(point=>{
                 if(point.x === undefined || point.y === undefined){
                     this.setState({
                         error:'Brakujace dane!'
                     });
-                    dataValid = false;
+                    return  false;
                 }
             });
-            if(!dataValid){
-                return;
-            }
+            return true;
+        }
+    }
 
-            this.setState({
-                error:''
-            })
+    createApproximation = () => {
+        if(!this.validData()){
+            return;
         }
 
-        const interpolationFunction = createInterpolationFunction(this.state.points);
+        const approximationFunction = createApproximationFunction(this.state.points, this.state.type);
         this.setState({
-            interpolation: createInterpolationString(this.state.points),
-            interpolationFunction: interpolationFunction,
+            approximationFunction: approximationFunction,
         });
 
         const xPoints = this.state.points.map(point=> point.x);
@@ -96,19 +111,23 @@ class App extends Component {
             return prev > curr ? prev : curr
         },yPoints[0]));
 
+        const getPoints = () => this.state.points.map(point=>[point.x,point.y]);
+
         functionPlot({
-            width: window.innerWidth*0.9,
-            height: window.innerHeight*0.85,
             target: '#chart',
-            xAxis: {domain: [xMin-1, xMax+1]},
-            yAxis: {domain: [yMin-2, yMax+2]},
+            xAxis: {domain: [xMin-0.1, xMax+0.1]},
+            yAxis: {domain: [yMin-0.1, yMax+0.1]},
             data: [{
                 graphType: 'polyline',
-                range: [xMin, xMax],
                 fn: function (scope) {
-                    return interpolationFunction(scope.x);
+                    return approximationFunction(scope.x);
                 }
-            }]
+            },
+                {
+                    points: getPoints(),
+                    fnType: 'points',
+                    graphType: 'scatter'
+                }]
         });
     };
 
@@ -117,13 +136,13 @@ class App extends Component {
             <div className="App">
                 <header className="App-header">
                     <p>
-                        Interpolacja Lagrange’a
+                        Aproksymacja, M.Klinowski
                     </p>
                 </header>
                 <div className="points-wrapper">
                     <p>Podaj wezły:</p>
                     {this.state.points.map((point, index) => {
-                        return <PointInput key={index} onXChange={this.onXChange} onYChange={this.onYChange}
+                        return <PointInput key={index} value={point} onXChange={this.onXChange} onYChange={this.onYChange}
                                            index={index}/>
                     })}
                     <br/>
@@ -131,23 +150,31 @@ class App extends Component {
                     <br/>
                     <button onClick={this.resetPoints}>zresetuj</button>
                     <br/>
-                    <button onClick={this.createInterpolation}>Oblicz</button>
+                    <button onClick={this.createApproximation}>Oblicz</button>
                     <br/>
                     <span className='error'>
                          {this.state.error ? this.state.error : ''}
                     </span>
                 </div>
+                <br/>
                 <div>
-                    <h2>Wielomian interpolacyjny:</h2>
-                        <MathJax.Context input='tex'>
-                            <div>
-                                <MathJax.Node inline>{'W(x) ='}</MathJax.Node> <MathJax.Node inline>{this.state.interpolation}</MathJax.Node>
-                            </div>
-                        </MathJax.Context>
+                    <div>
+                        <label for="linear">Aproksymacja liniowa</label>
+                        <input checked={this.state.type === 'linear'} id="linear" type="radio" name="type" value="linear" onChange={(e)=>this.onTypeChange(e)}/>
+                    </div>
+                    <br/>
+                    <div>
+                        <label for="log">Aproksymacja logarywmiczna</label>
+                        <input checked={this.state.type === 'log'} id="log"  type="radio" name="type" value="log" onChange={(e)=>this.onTypeChange(e)}/>
+                    </div>
+                    <br/>
+                    <div>
+                        <label for="exp">Aproksymacja exp</label>
+                        <input checked={this.state.type === 'exp'} id="exp" type="radio" name="type" value="exp" onChange={(e)=>this.onTypeChange(e)}/>
+                    </div>
                 </div>
-
                 <div>
-                    <h2>Wykres funkcji W(x):</h2>
+                    <h2>Wykres funkcji F(x):</h2>
                     <div id="chart">
 
                     </div>
